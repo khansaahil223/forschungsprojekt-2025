@@ -1,0 +1,53 @@
+name: vlan
+
+topology:
+  kinds:
+    nokia_srlinux:
+      image: ghcr.io/nokia/srlinux:24.10.1
+
+    linux:
+      image: ghcr.io/srl-labs/alpine
+
+  nodes:
+    srl:
+      startup-config: configs/srl.cfg
+      kind: nokia_srlinux
+
+    client1:
+      kind: linux
+      binds:
+        - configs/client.sh:/config.sh
+      exec:
+        - "ash -c '/config.sh 1'"
+
+    client2:
+      kind: linux
+      binds:
+        - configs/client.sh:/config.sh
+      exec:
+        - "ash -c '/config.sh 2'"
+
+    client3:
+      kind: linux
+      binds:
+        - configs/client.sh:/config.sh
+      exec:
+        - "ash -c '/config.sh 3'"
+    client4:
+      kind: linux
+      binds:
+        - configs/client.sh:/config.sh
+      exec:
+        - "ash -c '/config.sh 4'"
+
+  links:
+    # links between client1 and srl
+    - endpoints: [srl:e1-1, client1:eth1]
+
+    # links between client2 and srl
+    - endpoints: [srl:e1-2, client2:eth1]
+
+    # links between client3 and srl
+    - endpoints: [srl:e1-3, client3:eth1]
+    # links between client4 and srl
+    - endpoints: [srl:e1-4, client4:eth1]

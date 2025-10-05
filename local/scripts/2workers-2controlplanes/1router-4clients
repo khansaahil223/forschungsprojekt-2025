@@ -1,0 +1,24 @@
+alias clabverter='sudo docker run --user $(id -u)  -v $(pwd):/clabernetes/work --rm  ghcr.io/srl-labs/clabernetes/clabverter'
+
+kind delete cluster --name kind
+kind create cluster --name kind --config kind-config/2workers-2controlplanes.yaml
+
+helm upgrade --install --create-namespace --namespace c9s clabernetes oci://ghcr.io/srl-labs/clabernetes/clabernetes
+
+kubectl get nodes
+
+cd topologies/1router-4clients
+clabverter --stdout --naming non-prefixed > clabverter.yaml
+kubectl apply -f clabverter.yaml
+
+sleep 90
+
+ns=c9s-vlan
+client1=$(kubectl get pods -n $ns -o name | grep client1)
+client1=${client1#pod/}
+ips=$(kubectl get pods -n $ns -o wide | awk '/client[2-9]/{print $6}')
+for ip in $ips; do
+  echo "Pinging $ip from $client1"
+  kubectl exec -n $ns -it $client1 -- bash -c "ping -q -c 100 -i 0.1 $ip"
+  echo "-----------------------------------"
+done
