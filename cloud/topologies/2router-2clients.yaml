@@ -9,7 +9,41 @@ metadata:
 apiVersion: v1
 kind: ConfigMap
 metadata:
-    name: vlan-srl-startup-config
+    name: vlan-srl2-startup-config
+    namespace: c9s-vlan
+data:
+  startup-config: |-
+    # no vlan tagging configured
+    / interface ethernet-1/1 {
+        admin-state enable
+        subinterface 0 {
+            type bridged
+            admin-state enable
+        }
+    }
+
+    / interface ethernet-1/10 {
+        admin-state enable
+        subinterface 0 {
+            type bridged
+            admin-state enable
+        }
+    }
+
+    # bridge domain is like a L2 switch instance
+    / network-instance bridge-1 {
+        type mac-vrf
+        admin-state enable
+        interface ethernet-1/1.0 {
+        }
+        interface ethernet-1/10.0 {
+        }
+    }
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+    name: vlan-srl1-startup-config
     namespace: c9s-vlan
 data:
   startup-config: |-
@@ -140,9 +174,14 @@ spec:
             configMapName: vlan-client2-files
             configMapPath: configs-client.sh
             mode: execute
-        srl:
+        srl1:
           - filePath: configs/srl.cfg
-            configMapName: vlan-srl-startup-config
+            configMapName: vlan-srl1-startup-config
+            configMapPath: startup-config
+            mode: read
+        srl2:
+          - filePath: configs/srl.cfg
+            configMapName: vlan-srl2-startup-config
             configMapPath: startup-config
             mode: read
   naming: non-prefixed
@@ -154,32 +193,43 @@ spec:
             kinds:
               nokia_srlinux:
                 image: ghcr.io/nokia/srlinux:24.10.1
+
+                nodeSelector:
+                  node-type: routers
               
               linux:
                 image: ghcr.io/srl-labs/alpine
 
+                nodeSelector:
+                  node-type: clients
+
             nodes:
-              srl:
+              srl1:
                 kind: nokia_srlinux
                 startup-config: configs/srl.cfg
-
+              srl2:
+                kind: nokia_srlinux      
+                startup-config: configs/srl.cfg
               client1:
                 kind: linux
                 binds:
                   - configs/client.sh:/config.sh
                 exec:
-                  - "ash -c '/config.sh 1'"      
+                  - "ash -c '/config.sh 1'"
               client2:
                 kind: linux    
                 binds:
                   - configs/client.sh:/config.sh
                 exec:
-                  - "ash -c '/config.sh 2'"      
+                  - "ash -c '/config.sh 2'"
 
             links:
-              # links between client1 and srl
-              - endpoints: [client1:eth1, srl:e1-1]    
+              # links between client1 and srl1
+              - endpoints: [client1:eth1, srl1:e1-1]
 
-              # links between client2 and srl
-              - endpoints: [srl1:e1-1, client2:eth1]
+              # inter-switch link
+              - endpoints: [srl1:e1-10, srl2:e1-10]
+
+              # links between client2 and srl2
+              - endpoints: [srl2:e1-1, client2:eth1]
 

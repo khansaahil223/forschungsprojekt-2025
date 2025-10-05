@@ -9,40 +9,6 @@ metadata:
 apiVersion: v1
 kind: ConfigMap
 metadata:
-    name: vlan-srl-startup-config
-    namespace: c9s-vlan
-data:
-  startup-config: |-
-    # no vlan tagging configured
-    / interface ethernet-1/1 {
-        admin-state enable
-        subinterface 0 {
-            type bridged
-            admin-state enable
-        }
-    }
-
-    / interface ethernet-1/10 {
-        admin-state enable
-        subinterface 0 {
-            type bridged
-            admin-state enable
-        }
-    }
-
-    # bridge domain is like a L2 switch instance
-    / network-instance bridge-1 {
-        type mac-vrf
-        admin-state enable
-        interface ethernet-1/1.0 {
-        }
-        interface ethernet-1/10.0 {
-        }
-    }
----
-apiVersion: v1
-kind: ConfigMap
-metadata:
   name: vlan-client1-files
   namespace: c9s-vlan
 data:
@@ -140,11 +106,6 @@ spec:
             configMapName: vlan-client2-files
             configMapPath: configs-client.sh
             mode: execute
-        srl:
-          - filePath: configs/srl.cfg
-            configMapName: vlan-srl-startup-config
-            configMapPath: startup-config
-            mode: read
   naming: non-prefixed
   definition:
     containerlab: |-
@@ -154,6 +115,7 @@ spec:
             kinds:
               nokia_srlinux:
                 image: ghcr.io/nokia/srlinux:24.10.1
+                startup-config: configs/srl.cfg
               
               linux:
                 image: ghcr.io/srl-labs/alpine
@@ -161,7 +123,6 @@ spec:
             nodes:
               srl:
                 kind: nokia_srlinux
-                startup-config: configs/srl.cfg
 
               client1:
                 kind: linux

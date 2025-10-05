@@ -1,0 +1,3 @@
+[submodule "cloud/terraform-openstack-rke2"]
+	path = cloud/terraform-openstack-rke2
+	url = https://github.com/srieger1/terraform-openstack-rke2/
